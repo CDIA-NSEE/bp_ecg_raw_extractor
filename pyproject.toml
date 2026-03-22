@@ -40,6 +40,7 @@ dev = [
     "reportlab>=4.0",
     "numpy>=1.24",
     "taskipy>=1.12",
+    "bandit[toml]>=1.7",
 ]
 
 [build-system]
@@ -73,10 +74,14 @@ environments = [
     "sys_platform == 'linux' and python_version == '3.12'",
 ]
 
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+
 [tool.taskipy.tasks]
-lint       = { cmd = "ruff check .",          help = "Run ruff linter" }
-fmt        = { cmd = "ruff format .",         help = "Auto-format with ruff" }
-fmt-check  = { cmd = "ruff format --check .", help = "Check formatting (no writes)" }
-typecheck  = { cmd = "pyrefly",               help = "Run pyrefly type checker" }
-test       = { cmd = "pytest",                help = "Run test suite with coverage" }
-ci         = { cmd = "task lint && task fmt-check && task typecheck && task test", help = "Full CI suite (lint + format + types + tests)" }
+lint       = { cmd = "ruff check .",                                   help = "Run ruff linter" }
+fmt        = { cmd = "ruff format .",                                  help = "Auto-format with ruff" }
+fmt-check  = { cmd = "ruff format --check .",                          help = "Check formatting (no writes)" }
+typecheck  = { cmd = "pyrefly",                                        help = "Run pyrefly type checker" }
+bandit     = { cmd = "bandit -r src/ -c pyproject.toml",               help = "Run Bandit SAST" }
+test       = { cmd = "pytest",                                         help = "Run test suite" }
+ci         = { cmd = "task lint && task fmt-check && task typecheck && task bandit && task test", help = "Full CI gate" }

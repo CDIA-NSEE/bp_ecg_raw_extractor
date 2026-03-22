@@ -1,0 +1,127 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "30 6 * * 1"  # Weekly on Monday at 06:30 UTC
+
+# Minimal read-only permissions at workflow level — each job escalates as needed.
+permissions:
+  contents: read
+
+jobs:
+  # ── Secret scanning ──────────────────────────────────────────────────────────
+  # TruffleHog: scans git commit history for 800+ credential patterns.
+  # License: AGPL-3.0 (free OSS). No token required.
+  secret-scan:
+    name: Secret Scanning (TruffleHog)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history required so TruffleHog can scan all commits
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          # Report only verified leaks and unverified-but-plausible findings.
+          # Remove --results=verified,unknown to report everything (more noise).
+          extra_args: --results=verified,unknown
+
+  # ── Python SAST ──────────────────────────────────────────────────────────────
+  # Bandit: AST-based static analysis — finds hardcoded creds, weak crypto,
+  # unsafe subprocess usage, SQL injection patterns, etc.
+  # License: Apache-2.0 (free OSS). Configured via [tool.bandit] in pyproject.toml.
+  sast:
+    name: SAST (Bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      # First pass: generate JSON report (non-blocking) for artifact upload.
+      - name: Bandit — generate report
+        run: uv run bandit -r src/ -c pyproject.toml --format json -o bandit-report.json --exit-zero
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          retention-days: 30
+      # Second pass: block the pipeline on HIGH or CRITICAL severity findings.
+      - name: Bandit — fail on HIGH/CRITICAL
+        run: uv run bandit -r src/ -c pyproject.toml --severity-level high
+
+  # ── Dependency CVE audit ─────────────────────────────────────────────────────
+  # pip-audit: checks Python packages in the venv against PyPI Advisory DB / OSV.
+  # License: Apache-2.0 (free OSS). Maintained by PyPA.
+  dependency-audit:
+    name: Dependency Audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen  # populates .venv used by pip-audit below
+      - name: pip-audit
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          virtual-environment: .venv
+
+  # ── Container & filesystem scan ───────────────────────────────────────────────
+  # Trivy: scans for CVEs in OS packages, Python packages, and Dockerfile misconfigs.
+  # License: Apache-2.0 (free OSS). No token required.
+  #
+  # If Trivy reports a CVE you cannot fix (e.g. unfixable in base image), add its
+  # CVE ID to a .trivyignore file at the repo root to suppress it explicitly.
+  container-scan:
+    name: Container & Filesystem Scan (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Trivy filesystem scan covers: Python deps in pyproject.toml/uv.lock,
+      # Dockerfile misconfigurations, and embedded secrets.
+      - name: Trivy — filesystem + IaC misconfig scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          scanners: vuln,misconfig,secret
+
+  # ── Supply-chain health ───────────────────────────────────────────────────────
+  # OSSF Scorecard: checks 20+ supply-chain security practices (branch protection,
+  # pinned deps, signed releases, vulnerability disclosure, etc.).
+  # License: Apache-2.0 (free OSS for public repos).
+  # Runs on push to main and on the weekly schedule; skipped for PRs to avoid
+  # the id-token: write permission leaking into PR workflows from forked repos.
+  scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    permissions:
+      security-events: write  # upload SARIF to Security tab
+      id-token: write          # verify authenticity when publishing results
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: OSSF Scorecard
+        uses: ossf/scorecard-action@v2.4.3
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          # publish_results: true would show a badge and feed the public API
+          # but imposes strict workflow restrictions (separate workflow recommended).
+          # Set to false here so we can co-locate with other security jobs.
+          publish_results: false
+      - name: Upload Scorecard results
+        uses: actions/upload-artifact@v4
+        with:
+          name: scorecard-results
+          path: scorecard-results.sarif
+          retention-days: 5

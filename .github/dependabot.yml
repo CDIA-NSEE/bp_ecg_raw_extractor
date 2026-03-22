@@ -1,0 +1,38 @@
+version: 2
+
+updates:
+  # Python dependencies — reads pyproject.toml / uv.lock.
+  # Note: Dependabot uses the pip ecosystem to parse pyproject.toml.
+  # After a Dependabot PR is merged, run `uv lock` locally to regenerate uv.lock.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+
+  # Docker base image (python:3.12-slim etc.)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # GitHub Actions (keeps action versions from drifting)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
