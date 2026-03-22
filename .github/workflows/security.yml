@@ -44,7 +44,7 @@ jobs:
       - name: Bandit — generate report
         run: uv run bandit -r src/ -c pyproject.toml --format json -o bandit-report.json --exit-zero
       - name: Upload Bandit report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bandit-report
           path: bandit-report.json
@@ -120,7 +120,7 @@ jobs:
           # Set to false here so we can co-locate with other security jobs.
           publish_results: false
       - name: Upload Scorecard results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scorecard-results
           path: scorecard-results.sarif
