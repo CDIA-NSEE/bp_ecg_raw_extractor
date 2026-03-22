@@ -19,7 +19,7 @@ jobs:
     name: Secret Scanning (TruffleHog)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # full history required so TruffleHog can scan all commits
       - name: TruffleHog OSS
@@ -37,7 +37,7 @@ jobs:
     name: SAST (Bandit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v3
       - run: uv sync --frozen
       # First pass: generate JSON report (non-blocking) for artifact upload.
@@ -60,7 +60,7 @@ jobs:
     name: Dependency Audit (pip-audit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v3
       - run: uv sync --frozen  # populates .venv used by pip-audit below
       - name: pip-audit
@@ -78,7 +78,7 @@ jobs:
     name: Container & Filesystem Scan (Trivy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       # Trivy filesystem scan covers: Python deps in pyproject.toml/uv.lock,
       # Dockerfile misconfigurations, and embedded secrets.
       - name: Trivy — filesystem + IaC misconfig scan
@@ -107,7 +107,7 @@ jobs:
       id-token: write          # verify authenticity when publishing results
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - name: OSSF Scorecard
