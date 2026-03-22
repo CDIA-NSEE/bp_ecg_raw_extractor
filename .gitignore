@@ -40,6 +40,9 @@ htmlcov/
 # PaddleOCR model cache
 /models/
 
+# act (local GitHub Actions runner)
+.act-secrets
+
 # OS
 .DS_Store
 Thumbs.db

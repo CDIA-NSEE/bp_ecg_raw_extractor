@@ -1,7 +1,7 @@
 [project]
 name = "bp_ecg_raw_extractor"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "aioboto3>=13.0",
     "zstandard>=0.22",
@@ -18,7 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ocr = [
-    "paddlepaddle-cpu>=2.6",
+    "paddlepaddle>=2.6",
     "paddleocr>=2.7",
 ]
 ocr-gpu = [
@@ -39,6 +39,7 @@ dev = [
     "pyrefly>=0.1",
     "reportlab>=4.0",
     "numpy>=1.24",
+    "taskipy>=1.12",
 ]
 
 [build-system]
@@ -63,3 +64,19 @@ pythonVersion = "3.12"
 testpaths = ["tests"]
 addopts = "--cov=src --cov-report=term-missing --cov-fail-under=80"
 asyncio_mode = "auto"
+
+[tool.uv]
+# Lock only for the target runtime environment (Linux + Python 3.12 — Docker containers).
+# Avoids resolution failures for packages (e.g. paddlepaddle) that have no wheels on
+# other platforms or Python versions.
+environments = [
+    "sys_platform == 'linux' and python_version == '3.12'",
+]
+
+[tool.taskipy.tasks]
+lint       = { cmd = "ruff check .",          help = "Run ruff linter" }
+fmt        = { cmd = "ruff format .",         help = "Auto-format with ruff" }
+fmt-check  = { cmd = "ruff format --check .", help = "Check formatting (no writes)" }
+typecheck  = { cmd = "pyrefly",               help = "Run pyrefly type checker" }
+test       = { cmd = "pytest",                help = "Run test suite with coverage" }
+ci         = { cmd = "task lint && task fmt-check && task typecheck && task test", help = "Full CI suite (lint + format + types + tests)" }

@@ -7,9 +7,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
       - run: uv sync --frozen
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run pytest
+      - run: uv run task lint
+      - run: uv run task fmt-check
+      - run: uv run task typecheck
+      - run: uv run task test
       - uses: docker/build-push-action@v5
         with:
           push: false
