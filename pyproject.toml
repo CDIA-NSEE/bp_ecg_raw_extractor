@@ -39,7 +39,7 @@ dev = [
     "pyrefly>=0.1",
     "reportlab>=4.0",
     "numpy>=1.24",
-    "taskipy>=1.12",
+    "taskipy>=1.14.1",
     "bandit[toml]>=1.7",
 ]
 
